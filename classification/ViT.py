@@ -16,12 +16,12 @@ class VisionTransformer(nn.Module):
         self.encoder = nn.Sequential(*[TransformerBlock(hidden_size, num_heads) for _ in range(num_blocks)])
         self.layernorm_post = nn.LayerNorm(hidden_size)
         self.mlp_head = nn.Sequential(
-                                        nn.LayerNorm(hidden_size),
-                                        nn.Linear(in_features=hidden_size, out_features=mlp_size),
-                                        nn.ReLU(),
-                                        nn.Dropout(),
-                                        nn.Linear(in_features=mlp_size, out_features=output_size),
-                                    )
+            nn.LayerNorm(hidden_size),
+            nn.Linear(in_features=hidden_size, out_features=mlp_size),
+            nn.ReLU(),
+            nn.Dropout(),
+            nn.Linear(in_features=mlp_size, out_features=output_size),
+            )
 
     def forward(self, x):
         B, C, H, W = x.shape
@@ -54,7 +54,7 @@ class TransformerBlock(nn.Module):
 
     def forward(self, x):
         x = self.res_attn(x)
-        y = torch.add(x, self.mlp(self.layernorm(x)))
+        y = torch.add(x, self.mlp(self.layernorm(x))) # Dropout?
         return y
 
 
