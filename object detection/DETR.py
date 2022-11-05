@@ -26,7 +26,7 @@ class DETR(nn.Module):
        # x = self.transformer(pos + x.flatten(2).permute(2, 0, 1), self.query_pos.unsqueeze(1))
         query_pos = self.query_pos.unsqueeze(1)
         x = x.flatten(2).permute(2, 0, 1)
-        x = self.transformer(x, pos_embed, query_pos)
+        x = self.transformer(x, pos_embed, query_pos).permute(1, 0, 2)
         return self.ffn_cls(x), self.ffn_bbox(x).sigmoid()
 
 
@@ -68,7 +68,6 @@ class DETREncoderLayer(nn.Module):
 
     def forward(self, x, pos_embed):
         q, k, v = x+pos_embed, x+pos_embed, x
-        print('encoder', q.shape, k.shape, v.shape)
         x = self.mha(q, k, v)[0]
         x = torch.add(x, self.layernorm1(self.dropout(x)))
         x = self.ffn(x)
@@ -107,7 +106,6 @@ class DETRDecoderLayer(nn.Module):
 
     def forward(self, x, prev_output, pos_embed, query_pos):
         q, k, v = prev_output+query_pos, x+pos_embed, x
-        print('decoder', q.shape, k.shape, v.shape)
         x = self.mha(q, k, v)[0]
         x = torch.add(x, self.layernorm1(self.dropout(x)))
         x = self.ffn(x)

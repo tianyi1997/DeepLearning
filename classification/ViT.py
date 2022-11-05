@@ -29,7 +29,7 @@ class VisionTransformer(nn.Module):
         # B HW C
         x = self.patch_embedding(x)
         x = x.flatten(2).transpose(1, 2)
-        x = torch.concat([self.class_token, x], dim=1)
+        x = torch.concat([self.class_token.repeat(B, 1, 1), x], dim=1)
         
         x = torch.add(x, self.position_embedding)
         x = self.layernorm_pre(x)
@@ -74,6 +74,7 @@ class ResidualAttentionBlock(nn.Module):
 
 if __name__ == '__main__':
     vit = VisionTransformer()
-    input = torch.rand(1, 3, 224, 224)
+    input = torch.rand(2, 3, 224, 224)
     vit.eval()
-    print(vit(input))
+    print(vit(input).shape)
+    
