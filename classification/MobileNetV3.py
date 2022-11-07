@@ -1,7 +1,5 @@
 import torch
 from torch import nn
-from torch import functional as F
-from torch.nn.modules.container import ModuleList
 
 
 class MobileNetV3(nn.Module):
@@ -89,7 +87,7 @@ class NonResidualBottleneck(nn.Module):
         if nl_activation == 'HS':
             self.nl_activation = nn.Hardswish()
         elif nl_activation == 'RE':
-            self.nl_activation = nn.ReLU6()
+            self.nl_activation = nn.ReLU()
         else:
             raise ValueError('Unknown activation funciton.:', nl_activation)
 
@@ -128,7 +126,7 @@ class ResidualBottleneck(nn.Module):
         if nl_activation == 'HS':
             self.nl_activation = nn.Hardswish()
         elif nl_activation == 'RE':
-            self.nl_activation = nn.ReLU6()
+            self.nl_activation = nn.ReLU()
         else:
             raise ValueError('Unknown activation funciton.:', nl_activation)
 
