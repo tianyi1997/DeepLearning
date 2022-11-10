@@ -54,12 +54,12 @@ class MobileNetV3(nn.Module):
 
 
 class Bottleneck(nn.Module):
-    def __init__(self, in_channals, out_channals, exp_size, kernel_size, stride, nl_activation, need_se) -> None:
+    def __init__(self, in_channels, out_channels, exp_size, kernel_size, stride, nl_activation, need_se) -> None:
         super().__init__()
-        if in_channals == out_channals and stride == 1:
-            self.layers = ResidualBottleneck(in_channals, exp_size, kernel_size, nl_activation, need_se)
+        if in_channels == out_channels and stride == 1:
+            self.layers = ResidualBottleneck(in_channels, exp_size, kernel_size, nl_activation, need_se)
         else:
-            self.layers = NonResidualBottleneck(in_channals, out_channals, exp_size, kernel_size, stride, nl_activation, need_se)
+            self.layers = NonResidualBottleneck(in_channels, out_channels, exp_size, kernel_size, stride, nl_activation, need_se)
 
     def forward(self, x):
         y = self.layers(x)
@@ -67,17 +67,17 @@ class Bottleneck(nn.Module):
 
 
 class NonResidualBottleneck(nn.Module):
-    def __init__(self, in_channals, out_channals, exp_size, kernel_size, stride, nl_activation, need_se, reduce=4) -> None:
+    def __init__(self, in_channels, out_channels, exp_size, kernel_size, stride, nl_activation, need_se, reduce=4) -> None:
         super().__init__()
-        self.conv1x1_up = nn.Conv2d(in_channals, exp_size, (1, 1))
+        self.conv1x1_up = nn.Conv2d(in_channels, exp_size, (1, 1))
         self.bn1 = nn.BatchNorm2d(exp_size)
         self.convDW = nn.Sequential(
             nn.Conv2d(exp_size, exp_size, kernel_size, stride, kernel_size//2, groups=exp_size),
             nn.Conv2d(exp_size, exp_size, kernel_size=1)
             )
         self.bn2 = nn.BatchNorm2d(exp_size)
-        self.conv1x1_down = nn.Conv2d(exp_size, out_channals, (1, 1))
-        self.bn3 = nn.BatchNorm2d(out_channals)
+        self.conv1x1_down = nn.Conv2d(exp_size, out_channels, (1, 1))
+        self.bn3 = nn.BatchNorm2d(out_channels)
 
         if need_se:
             self.selayer = SELayer(exp_size, reduce)
@@ -106,17 +106,17 @@ class NonResidualBottleneck(nn.Module):
 
 
 class ResidualBottleneck(nn.Module):
-    def __init__(self, in_channals, exp_size, kernel_size, nl_activation, need_se, reduce=4) -> None:
+    def __init__(self, in_channels, exp_size, kernel_size, nl_activation, need_se, reduce=4) -> None:
         super().__init__()
-        self.conv1x1_up = nn.Conv2d(in_channals, exp_size, (1, 1))
+        self.conv1x1_up = nn.Conv2d(in_channels, exp_size, (1, 1))
         self.bn1 = nn.BatchNorm2d(exp_size)
         self.convDW = nn.Sequential(
             nn.Conv2d(exp_size, exp_size, kernel_size, stride=1, padding=kernel_size//2, groups=exp_size),
             nn.Conv2d(exp_size, exp_size, 1)
             )
         self.bn2 = nn.BatchNorm2d(exp_size)
-        self.conv1x1_down = nn.Conv2d(exp_size, in_channals, (1, 1))
-        self.bn3 = nn.BatchNorm2d(in_channals)
+        self.conv1x1_down = nn.Conv2d(exp_size, in_channels, (1, 1))
+        self.bn3 = nn.BatchNorm2d(in_channels)
         
         if need_se:
             self.selayer = SELayer(exp_size, reduce)
