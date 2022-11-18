@@ -1,16 +1,13 @@
 import torch
 from torch import nn
-from copy import deepcopy
 
 class ResNet50_FPN(nn.Module):
     def __init__(self, feature_dims=256) -> None:
         super().__init__()
-        self.stage1 = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=7, stride=2, padding=3),
-            nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        )
+        self.stage1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=7, stride=2, padding=3)
         self.stage2 = nn.Sequential(
-            ResNetBottleneck(64, 64, 256, True),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
+            ResNetBottleneck(64, 64, 256, False),
             *[ResNetBottleneck(256, 64, 256, False) for _ in range(2)]
         )
         self.stage3 = nn.Sequential(
@@ -40,7 +37,6 @@ class ResNet50_FPN(nn.Module):
         p4 = self.fp4(c4, p5)
         p3 = self.fp3(c3, p4)
         p2 = self.fp2(c2, p3)
-
         return [p5, p4, p3, p2]
 
 class FPBlock(nn.Module):
@@ -96,13 +92,13 @@ class ResNetBottleneck(nn.Module):
             ),
             nn.BatchNorm2d(out_channels)
         )
-        if downsample:
+        if downsample or in_channels != out_channels:
             self.shortcut = nn.Sequential(
                 nn.Conv2d(
                     in_channels=in_channels,
                     out_channels=out_channels,
                     kernel_size=1,
-                    stride=2
+                    stride=stride
                 ),
                 nn.BatchNorm2d(out_channels)
             )
@@ -118,7 +114,9 @@ class ResNetBottleneck(nn.Module):
         return y
 
 if __name__ == '__main__':
-    model = ResNet50_FPN()
-    inputs = torch.rand((5, 3, 256, 256))
+    device = ('cuda' if torch.cuda.is_available() else 'cpu')
+    model = ResNet50_FPN().to(device)
+    inputs = torch.rand((5, 3, 512, 512)).to(device)
     model.eval()
-    [print(p.shape) for p in model(inputs)]
+    for p in model(inputs):
+        print(p.shape)
