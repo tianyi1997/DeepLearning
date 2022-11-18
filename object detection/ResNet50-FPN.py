@@ -23,9 +23,9 @@ class ResNet50_FPN(nn.Module):
             *[ResNetBottleneck(2048, 512, 2048, False) for _ in range(2)]            
         )
         self.fp5 = nn.Conv2d(in_channels=2048, out_channels=feature_dims, kernel_size=1)
-        self.fp4 = FPBlock(1024, feature_dims)
-        self.fp3 = FPBlock(512, feature_dims)
-        self.fp2 = FPBlock(256, feature_dims)
+        self.fp4 = FPNPath(1024, feature_dims)
+        self.fp3 = FPNPath(512, feature_dims)
+        self.fp2 = FPNPath(256, feature_dims)
         self.downsample = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
     def forward(self, c0):
@@ -41,7 +41,7 @@ class ResNet50_FPN(nn.Module):
         p6 = self.downsample(p5)
         return [p6, p5, p4, p3, p2]
 
-class FPBlock(nn.Module):
+class FPNPath(nn.Module):
     def __init__(self, low_channels, feature_dims) -> None:
         super().__init__()
         self.lateral_path = nn.Conv2d(
