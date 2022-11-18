@@ -26,7 +26,8 @@ class ResNet50_FPN(nn.Module):
         self.fp4 = FPBlock(1024, feature_dims)
         self.fp3 = FPBlock(512, feature_dims)
         self.fp2 = FPBlock(256, feature_dims)
-        
+        self.downsample = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+
     def forward(self, c0):
         c1 = self.stage1(c0)
         c2 = self.stage2(c1)
@@ -37,7 +38,8 @@ class ResNet50_FPN(nn.Module):
         p4 = self.fp4(c4, p5)
         p3 = self.fp3(c3, p4)
         p2 = self.fp2(c2, p3)
-        return [p5, p4, p3, p2]
+        p6 = self.downsample(p5)
+        return [p6, p5, p4, p3, p2]
 
 class FPBlock(nn.Module):
     def __init__(self, low_channels, feature_dims) -> None:
