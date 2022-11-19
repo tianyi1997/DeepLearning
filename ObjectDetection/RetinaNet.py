@@ -23,11 +23,13 @@ class RetinaNet(nn.Module):
 class BoxRegressionSubnet(nn.Module):
     def __init__(self, num_anchors, in_channels) -> None:
         super().__init__()
+        self.num_anchors = num_anchors
+        self.in_channels = in_channels
         self.conv = nn.Sequential(
-            nn.Conv2d(in_channels, in_channels ,kernel_size=3, padding=1), nn.ReLU(),
-            nn.Conv2d(in_channels, in_channels ,kernel_size=3, padding=1), nn.ReLU(),
-            nn.Conv2d(in_channels, in_channels ,kernel_size=3, padding=1), nn.ReLU(),
-            nn.Conv2d(in_channels, in_channels ,kernel_size=3, padding=1), nn.ReLU(),
+            nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1), nn.ReLU(),
+            nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1), nn.ReLU(),
+            nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1), nn.ReLU(),
+            nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1), nn.ReLU(),
         )
         self.bbox_reg = nn.Sequential(
             nn.Conv2d(in_channels, 4*num_anchors, kernel_size=3, padding=1),
@@ -35,21 +37,30 @@ class BoxRegressionSubnet(nn.Module):
             )
 
     def forward(self, x):
-        all_box = []
+        A =  self.num_anchors
+        all_bbox = []
         for p in x:
+            B, _, H, W = p.shape
             bbox = self.bbox_reg(self.conv(p))
-            all_box.append(bbox)
-        return all_box
+            # (B, 4K, H, W) --> (B, HWA, 4)
+            bbox = bbox.view((B, A, 4, H, W))
+            bbox = bbox.permute(0, 3, 4, 1, 2)
+            bbox = bbox.flatten(1, 3)
+            all_bbox.append(bbox)
+        return torch.concat(all_bbox, dim=1)
 
 
 class ClassificationSubnet(nn.Module):
     def __init__(self, num_classes, num_anchors, in_channels) -> None:
         super().__init__()
+        self.num_classes = num_classes
+        self.num_anchors = num_anchors
+        self.in_channels = in_channels
         self.conv = nn.Sequential(
-            nn.Conv2d(in_channels, in_channels ,kernel_size=3, padding=1), nn.ReLU(),
-            nn.Conv2d(in_channels, in_channels ,kernel_size=3, padding=1), nn.ReLU(),
-            nn.Conv2d(in_channels, in_channels ,kernel_size=3, padding=1), nn.ReLU(),
-            nn.Conv2d(in_channels, in_channels ,kernel_size=3, padding=1), nn.ReLU(),
+            nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1), nn.ReLU(),
+            nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1), nn.ReLU(),
+            nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1), nn.ReLU(),
+            nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1), nn.ReLU(),
         )
         self.cls_logits = nn.Sequential(
             nn.Conv2d(in_channels, num_classes*num_anchors, kernel_size=3, padding=1),
@@ -57,11 +68,17 @@ class ClassificationSubnet(nn.Module):
             )
 
     def forward(self, x):
+        K, A = self.num_classes, self.num_anchors
         all_cls = []
         for p in x:
+            B, _, H, W = p.shape
             cls = self.cls_logits(self.conv(p))
+            # (B, AK, H, W) --> (B, HWA, K)
+            cls = cls.view((B, A, K, H, W))
+            cls = cls.permute(0, 3, 4, 1, 2)
+            cls = cls.flatten(1, 3)
             all_cls.append(cls)
-        return all_cls
+        return torch.concat(all_cls, dim=1)
 
 
 class ResNet50_FPN(ResNet50_FPN):
@@ -94,5 +111,4 @@ if __name__ == '__main__':
     inputs = torch.rand((5, 3, 512, 512)).to(device)
     model.eval()
     for p in model(inputs):
-        for x in p:
-            print(x.shape)
+        print(p.shape)
