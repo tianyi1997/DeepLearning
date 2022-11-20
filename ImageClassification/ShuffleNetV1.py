@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 
-class ShuffleNet(nn.Module):
+class ShuffleNetV1(nn.Module):
     def __init__(self, num_classes, num_groups, scale_ratio=1) -> None:
         super().__init__()
         group2channels = {
@@ -21,16 +21,16 @@ class ShuffleNet(nn.Module):
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         )
         self.stage2 = nn.Sequential(
-            ShuffleNetBlock(int(24*scale_ratio), out_channels, 2, num_groups, grouped_conv1=False),
-            *[ShuffleNetBlock(out_channels, out_channels, 1, num_groups) for _ in range(3)]
+            ShuffleNetV1Block(int(24*scale_ratio), out_channels, 2, num_groups, grouped_conv1=False),
+            *[ShuffleNetV1Block(out_channels, out_channels, 1, num_groups) for _ in range(3)]
         )
         self.stage3 = nn.Sequential(
-            ShuffleNetBlock(out_channels, 2*out_channels, 2, num_groups),
-            *[ShuffleNetBlock(2*out_channels, 2*out_channels, 1, num_groups) for _ in range(7)]
+            ShuffleNetV1Block(out_channels, 2*out_channels, 2, num_groups),
+            *[ShuffleNetV1Block(2*out_channels, 2*out_channels, 1, num_groups) for _ in range(7)]
         )
         self.stage4 = nn.Sequential(
-            ShuffleNetBlock(2*out_channels, 4*out_channels, 2, num_groups),
-            *[ShuffleNetBlock(4*out_channels, 4*out_channels, 1, num_groups) for _ in range(3)]
+            ShuffleNetV1Block(2*out_channels, 4*out_channels, 2, num_groups),
+            *[ShuffleNetV1Block(4*out_channels, 4*out_channels, 1, num_groups) for _ in range(3)]
         )
         self.globalpool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Linear(4*out_channels, num_classes)
@@ -46,7 +46,7 @@ class ShuffleNet(nn.Module):
         return y
 
 
-class ShuffleNetBlock(nn.Module):
+class ShuffleNetV1Block(nn.Module):
     def __init__(self, in_channels, out_channels, stride, num_groups, bottleneck_scale=0.25, grouped_conv1=True) -> None:
         super().__init__()
         self.num_groups = num_groups
@@ -93,7 +93,7 @@ class ShuffleNetBlock(nn.Module):
 
 
 if __name__ == '__main__':
-    model = ShuffleNet(num_classes=1000, num_groups=3, scale_ratio=1)
+    model = ShuffleNetV1(num_classes=1000, num_groups=3, scale_ratio=1)
     model.eval()
     inputs = torch.rand((5, 3, 224, 224))
     print(model(inputs).shape)    
