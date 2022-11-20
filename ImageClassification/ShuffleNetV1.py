@@ -2,8 +2,12 @@ import torch
 from torch import nn
 
 
+def DepthwiseConv2d(in_channels, kernel_size, **kwarg):
+    return nn.Conv2d(in_channels, in_channels, kernel_size, **kwarg, groups=in_channels)
+
+
 class ShuffleNetV1(nn.Module):
-    def __init__(self, num_classes, num_groups, scale_ratio=1) -> None:
+    def __init__(self, num_classes, num_groups, scale_factor=1) -> None:
         super().__init__()
         group2channels = {
             1: 144,
@@ -13,7 +17,8 @@ class ShuffleNetV1(nn.Module):
             8: 384
         }
         assert num_groups in group2channels, 'Unknown num_groups'
-        out_channels = int(group2channels[num_groups]*scale_ratio)
+        self.num_classes = num_classes
+        out_channels = int(group2channels[num_groups]*scale_factor)
         self.stage1 = nn.Sequential(
             nn.Conv2d(in_channels=3, out_channels=24, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(24),
@@ -21,16 +26,16 @@ class ShuffleNetV1(nn.Module):
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         )
         self.stage2 = nn.Sequential(
-            ShuffleNetV1Block(24, out_channels, 2, num_groups, grouped_conv1=False),
-            *[ShuffleNetV1Block(out_channels, out_channels, 1, num_groups) for _ in range(3)]
+            ShuffleNetV1Unit(24, out_channels, 2, num_groups, grouped_conv1=False),
+            *[ShuffleNetV1Unit(out_channels, out_channels, 1, num_groups) for _ in range(3)]
         )
         self.stage3 = nn.Sequential(
-            ShuffleNetV1Block(out_channels, 2*out_channels, 2, num_groups),
-            *[ShuffleNetV1Block(2*out_channels, 2*out_channels, 1, num_groups) for _ in range(7)]
+            ShuffleNetV1Unit(out_channels, 2*out_channels, 2, num_groups),
+            *[ShuffleNetV1Unit(2*out_channels, 2*out_channels, 1, num_groups) for _ in range(7)]
         )
         self.stage4 = nn.Sequential(
-            ShuffleNetV1Block(2*out_channels, 4*out_channels, 2, num_groups),
-            *[ShuffleNetV1Block(4*out_channels, 4*out_channels, 1, num_groups) for _ in range(3)]
+            ShuffleNetV1Unit(2*out_channels, 4*out_channels, 2, num_groups),
+            *[ShuffleNetV1Unit(4*out_channels, 4*out_channels, 1, num_groups) for _ in range(3)]
         )
         self.globalpool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Linear(4*out_channels, num_classes)
@@ -46,7 +51,7 @@ class ShuffleNetV1(nn.Module):
         return y
 
 
-class ShuffleNetV1Block(nn.Module):
+class ShuffleNetV1Unit(nn.Module):
     def __init__(self, in_channels, out_channels, stride, num_groups, bottleneck_scale=0.25, grouped_conv1=True) -> None:
         super().__init__()
         self.num_groups = num_groups
@@ -59,7 +64,7 @@ class ShuffleNetV1Block(nn.Module):
         )
         self.channelshuffle = ChannelShuffle(num_groups)
         self.dwconv3x3 = nn.Sequential(
-            nn.Conv2d(in_channels=hidden_channels, out_channels=hidden_channels, kernel_size=3, stride=stride, padding=1, groups=hidden_channels),
+            DepthwiseConv2d(hidden_channels, 3, stride=stride, padding=1),
             nn.BatchNorm2d(hidden_channels)
         )
         if self.downsample:
@@ -102,7 +107,7 @@ class ChannelShuffle(nn.Module):
 
 
 if __name__ == '__main__':
-    model = ShuffleNetV1(num_classes=1000, num_groups=8, scale_ratio=0.25)
+    model = ShuffleNetV1(num_classes=1000, num_groups=8, scale_factor=0.25)
     model.eval()
     inputs = torch.rand((5, 3, 224, 224))
     print(model(inputs).shape)    
