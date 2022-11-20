@@ -79,15 +79,16 @@ class ShuffleNetV1Block(nn.Module):
     def forward(self, x):
         B, _, H, W = x.shape
         res = self.gconv1x1_down(x)
-        res = res.view(B, self.num_groups, -1, H, W)
-        res = res.permute(0, 2, 1, 3, 4).flatten(1, 2)
+        # channel shuffle
+        res = res.view(B, self.num_groups, -1, H, W)    # reshape (B, NG, H, W) --> (B, N, G, H, W)
+        res = res.permute(0, 2, 1, 3, 4)    # transpose (B, N, G, H, W) --> (B, G, N, H, W)
+        res = res.flatten(1, 2)     # flatten (B, G, N, H, W) --> (B, GN, H, W  )
         res = self.dwconv3x3(res)
         res = self.gconv1x1_up(res)
         if self.downsample:
             y = self.relu(torch.concat([res, self.shortcut(x)], dim=1))
         else:
             y = self.relu(res + self.shortcut(x))
-
         return y
 
 
