@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 
+
 class ShuffleNet(nn.Module):
     def __init__(self, num_classes, num_groups, scale_ratio=1) -> None:
         super().__init__()
@@ -74,6 +75,7 @@ class ShuffleNetBlock(nn.Module):
                 nn.BatchNorm2d(out_channels)
             )
             self.shortcut = nn.Identity()
+        self.relu = nn.ReLU()
 
     def forward(self, x):
         B, _, H, W = x.shape
@@ -83,10 +85,12 @@ class ShuffleNetBlock(nn.Module):
         res = self.dwconv3x3(res)
         res = self.gconv1x1_up(res)
         if self.downsample:
-            y = torch.concat([res, self.shortcut(x)], dim=1)
+            y = self.relu(torch.concat([res, self.shortcut(x)], dim=1))
         else:
-            y = res + self.shortcut(x)
+            y = self.relu(res + self.shortcut(x))
+
         return y
+
 
 if __name__ == '__main__':
     model = ShuffleNet(num_classes=1000, num_groups=3, scale_ratio=1)
