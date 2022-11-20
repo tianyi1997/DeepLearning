@@ -6,22 +6,22 @@ class ShuffleNetV1(nn.Module):
     def __init__(self, num_classes, num_groups, scale_ratio=1) -> None:
         super().__init__()
         group2channels = {
-            1: int(144*scale_ratio),
-            2: int(200*scale_ratio),
-            3: int(240*scale_ratio),
-            4: int(272*scale_ratio),
-            8: int(384*scale_ratio)
+            1: 144,
+            2: 200,
+            3: 240,
+            4: 272,
+            8: 384
         }
-        assert num_groups in group2channels, 'Unknown num_group'
+        assert num_groups in group2channels, 'Unknown num_groups'
         out_channels = int(group2channels[num_groups]*scale_ratio)
         self.stage1 = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=int(24*scale_ratio), kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm2d(int(24*scale_ratio)),
+            nn.Conv2d(in_channels=3, out_channels=24, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(24),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         )
         self.stage2 = nn.Sequential(
-            ShuffleNetV1Block(int(24*scale_ratio), out_channels, 2, num_groups, grouped_conv1=False),
+            ShuffleNetV1Block(24, out_channels, 2, num_groups, grouped_conv1=False),
             *[ShuffleNetV1Block(out_channels, out_channels, 1, num_groups) for _ in range(3)]
         )
         self.stage3 = nn.Sequential(
@@ -63,7 +63,6 @@ class ShuffleNetV1Block(nn.Module):
             nn.BatchNorm2d(hidden_channels)
         )
         if self.downsample:
-            # TODO out_channels-in_channels must be divisible by groups (e.g. when g=8 s=0.5)
             self.gconv1x1_up = nn.Sequential(
                 nn.Conv2d(in_channels=hidden_channels, out_channels=out_channels-in_channels, kernel_size=1, groups=num_groups),
                 nn.BatchNorm2d(out_channels-in_channels)
@@ -93,7 +92,7 @@ class ShuffleNetV1Block(nn.Module):
 
 
 if __name__ == '__main__':
-    model = ShuffleNetV1(num_classes=1000, num_groups=3, scale_ratio=1)
+    model = ShuffleNetV1(num_classes=1000, num_groups=8, scale_ratio=0.25)
     model.eval()
     inputs = torch.rand((5, 3, 224, 224))
     print(model(inputs).shape)    
