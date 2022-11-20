@@ -57,7 +57,7 @@ class ShuffleNetV1Block(nn.Module):
             nn.BatchNorm2d(hidden_channels),
             nn.ReLU()
         )
-
+        self.channelshuffle = ChannelShuffle(num_groups)
         self.dwconv3x3 = nn.Sequential(
             nn.Conv2d(in_channels=hidden_channels, out_channels=hidden_channels, kernel_size=3, stride=stride, padding=1, groups=hidden_channels),
             nn.BatchNorm2d(hidden_channels)
@@ -77,12 +77,8 @@ class ShuffleNetV1Block(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, x):
-        B, _, H, W = x.shape
         res = self.gconv1x1_down(x)
-        # channel shuffle
-        res = res.view(B, self.num_groups, -1, H, W)    # reshape (B, NG, H, W) --> (B, N, G, H, W)
-        res = res.permute(0, 2, 1, 3, 4)    # transpose (B, N, G, H, W) --> (B, G, N, H, W)
-        res = res.flatten(1, 2)     # flatten (B, G, N, H, W) --> (B, GN, H, W  )
+        res = self.channelshuffle(res)
         res = self.dwconv3x3(res)
         res = self.gconv1x1_up(res)
         if self.downsample:
@@ -90,6 +86,19 @@ class ShuffleNetV1Block(nn.Module):
         else:
             y = self.relu(res + self.shortcut(x))
         return y
+
+
+class ChannelShuffle(nn.Module):
+    def __init__(self, num_groups) -> None:
+        super().__init__()
+        self.num_groups = num_groups
+
+    def forward(self, x):
+        B, _, H, W = x.shape
+        x = x.view(B, self.num_groups, -1, H, W)    # reshape (B, NG, H, W) --> (B, N, G, H, W)
+        x = x.permute(0, 2, 1, 3, 4)    # transpose (B, N, G, H, W) --> (B, G, N, H, W)
+        x = x.flatten(1, 2)     # flatten (B, G, N, H, W) --> (B, GN, H, W  )
+        return x
 
 
 if __name__ == '__main__':
