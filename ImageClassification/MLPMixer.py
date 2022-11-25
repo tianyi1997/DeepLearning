@@ -26,6 +26,7 @@ class MLPMixer(nn.Module):
         num_tokenes = (image_size[0] // patch_size) * (image_size[1] // patch_size) 
         self.proj = nn.Conv2d(in_channels=3, out_channels=num_channels, kernel_size=patch_size, stride=patch_size)
         self.mixerlayers = nn.Sequential(*[MixerLayer(num_channels, num_tokenes, mlp_dim_channel, mlp_dim_token) for _ in range(num_layers)])
+        self.layernorm = nn.LayerNorm(num_channels)
         self.globalpool = nn.AdaptiveAvgPool1d(1)
         self.fc = nn.Linear(num_channels, num_classes)
 
