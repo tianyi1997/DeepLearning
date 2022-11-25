@@ -33,8 +33,8 @@ class MLPMixer(nn.Module):
     def forward(self, x):
         B, C, H, W = x.shape
         assert (H, W) == self.image_size
-        x = self.proj(x).flatten(2).permute(0, 2, 1)
-        x = self.mixerlayers(x).permute(0, 2, 1)
+        x = self.proj(x).flatten(2).transpose(1, 2)
+        x = self.mixerlayers(x).transpose(1, 2)
         x = self.globalpool(x).flatten(1)
         y = self.fc(x)
         return y        
@@ -72,9 +72,9 @@ class TokenMixingMLP(nn.Module):
 
     def forward(self, x):
         res = self.layernorm(x)
-        res = res.permute(0, 2, 1)
+        res = res.transpose(1, 2)
         res = self.mlp(res)
-        y = res.permute(0, 2, 1) + x
+        y = res.transpose(1, 2) + x
         return y
     
 
