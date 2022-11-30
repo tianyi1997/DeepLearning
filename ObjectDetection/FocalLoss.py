@@ -2,6 +2,8 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
+
+# 用于softmax而非sigmod
 class FocalLoss(nn.Module):
     def __init__(self, gamma, alpha=1, reduce='mean') -> None:
         assert reduce in ['sum', 'mean']
